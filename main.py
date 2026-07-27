@@ -188,18 +188,18 @@ def home():
     return {"message": "Guardrail API is running"}
 
 
-@app.post("/guardrail")
-def guardrail(req: ToolRequest):
-    try:
-        if req.tool == "read_file":
-            path = req.arguments.get("path")
-            action, reason, result = do_read_file(path)
-        elif req.tool == "fetch_url":
-            url = req.arguments.get("url")
-            action, reason, result = do_fetch_url(url)
-        else:
-            action, reason, result = "block", "unknown tool", None
-    except Exception as e:
-        action, reason, result = "block", f"internal error: {e}", None
-
-    return {"action": action, "reason": reason, "result": result}
+@app.get("/status")
+def status():
+    """Diagnostic: confirms whether the required fixture files actually
+    exist on disk. If any show exists=false, provisioning failed."""
+    import os
+    report = {}
+    for path in REQUIRED_FILES:
+        try:
+            report[str(path)] = {
+                "exists": path.exists(),
+                "readable": path.exists() and path.is_file() and os.access(path, os.R_OK),
+            }
+        except Exception as e:
+            report[str(path)] = {"exists": False, "error": str(e)}
+    return report
